@@ -6,11 +6,12 @@ def main() -> None:
     if len(sys.argv) != 2:
         print(f"Wrong usage [Executable] [dataset]")
         return None
+    d = None
     try:
-        getdata.get_data(sys.argv[1])
+        d = getdata.get_data(sys.argv[1])
     except MyCustomError as e:
         print(f"Some issues with {sys.argv[1]}")
-
+    d.describe()
 
 if  __name__ == "__main__":
     main()
