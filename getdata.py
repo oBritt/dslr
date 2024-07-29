@@ -61,6 +61,7 @@ class Data:
         for l in self.data:
             valid.append(check_if_numeric(l))
             amount += valid[-1]
+        
         described:list[list[str]] = [[] for _ in range(amount + 1)]
         self.fill_firs_colomn(described[0])
         counter = 1
@@ -72,6 +73,33 @@ class Data:
                     described.pop(counter)
         output(described)
 
+    def get_information_histogramm(self)->dict[str, dict[str, list[float]]]:
+        return_val:dict[str, dict[str, list[float]]] = {}
+        house_ind = 0
+        valid = []
+        for i in range(len(self.data)):
+            valid.append(check_if_numeric(self.data[i]))
+            if self.data[i][0] == 'Hogwarts House':
+                house_ind = i
+                valid[-1] = 0
+        valid[0] = 0
+
+        for i in range(len(self.data)):
+            if valid[i]:                
+                out:dict[str, list[float]] = {}
+                houses = set(self.data[house_ind][1:])
+                for house in houses:
+                    out[house] = []
+                for e in range(1, len(self.data[i])):
+                    if self.data[i][e] != "":
+                        out[self.data[house_ind][e]].append(float(self.data[i][e]))
+                for key in out.keys():
+                    value = out[key]
+                    value = sorted(value)
+                    out[key] = value
+                return_val[self.data[i][0]] = out
+
+        return return_val
 
     def print_data(self)->None:
         output(self.data)

@@ -1,4 +1,7 @@
-id, Name, salary
-1,Oleksandr,100000
-2,Tom,100
-3,Flafi, 1
+id,Name,salary,Hogwarts House,bro
+1,Oleksandr,100000,bla,12
+2,Tom,100,ta,123
+3,Flafi, 5232,bla,12412
+4,Flafi, 523,bla,123
+5,Flafi, 4,bla,123
+6,Flafi, 23423,bla,312
