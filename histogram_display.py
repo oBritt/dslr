@@ -45,6 +45,23 @@ class Histogramm:
                     out[key][range_n - 1] += 1
         return out
     
+    def display_colors_and_courses(self, colors_dict:dict[str: tuple[int]])->None:
+        distance = 100
+        y = 50
+        for key in colors_dict.keys():
+            # pygame.draw.rect(self.screen, colors_dict[key], (distance, 30, 40, 40))
+            pygame.draw.circle(self.screen, colors_dict[key], (distance + 20, y), 20)
+            width = self.get_width_text(key, self.font_words)
+            self.draw_text(key, (distance + width,y), 0, self.font_words)
+            distance += width 
+            distance += width 
+
+    
+    def get_width_text(self, text:str, font)->int:
+        text_surface = font.render(text, True, (0, 0, 0))
+        text_width, text_height = text_surface.get_size()
+        return text_width
+    
     def draw_text(self, text: str, position: tuple[int, int], angle: int, font) -> None:
         text_surface = font.render(text, True, (0, 0, 0))
         rotated_surface = pygame.transform.rotate(text_surface, angle)
@@ -57,6 +74,12 @@ class Histogramm:
             self.draw_text(str("%.0f" % max_value), (x - len(str("%.0f" % max_value)) * 3 - 5, y + height * i / 10), 0, self.font_numbers)
             pygame.draw.line(self.screen, (0, 0, 0), (x - 3 ,y + height * i / 10), (x + 3 ,y + height * i / 10), 1)
             max_value -= step
+    
+    def draw_x_axis(self, x:int, y:int, width:int, ranges:list[list[float]])->None:
+        for i in range(4):
+            ind = 4 + i * 4
+            self.draw_text(str("%.0f" % ranges[ind][0]), (x + width * ind / 20, y + 10), 0, self.font_numbers)
+            pygame.draw.line(self.screen, (0, 0, 0), (x + width * ind / 20, y - 3), (x + width * ind / 20, y + 3), 1)
 
     def get_width_height(self, amount:int):
         amount //= 2
@@ -65,8 +88,19 @@ class Histogramm:
         if width > 200:
             width = 200
         return width, width * 2
+    
+    def draw_colomn(self, x:int, y:int, width:int, height:int, color:tuple[int])->None:
+        surface = pygame.Surface((width, height), pygame.SRCALPHA)
+        surface.fill((*color, 128))
+        self.screen.blit(surface, (x, y - height + 1))
+        # pygame.draw.line(self.screen, color, (x, y), (x + 10, y), 2)
 
-    def display_histogram(self, x:int, y:int, width:int, height:int, data:dict[str, list[float]], name:str)->None:
+    def draw_information(self, x:int, y:int, width:int, height:int, max_num:int, data:dict[str, list[int]], colors_dict:dict[str, tuple[int]])->None:
+        for key in data.keys():
+            for i in range(len(data[key])):
+                self.draw_colomn(x + width * i / len(data[key]) , y + height, width / len(data[key]), height / max_num * data[key][i], colors_dict[key])
+
+    def display_histogram(self, x:int, y:int, width:int, height:int, data:dict[str, list[float]], name:str, colors_dict:dict[str, tuple[int]])->None:
         pygame.draw.polygon(self.screen, (0, 0, 0), [[x, y], [x + width, y], [x + width, y + height], [x, y + height]], 1)
         self.draw_text(name, (x  + width / 2, y - 20), 0, self.font_words)
         all_numbers = []
@@ -79,10 +113,10 @@ class Histogramm:
         all_ranges = []
         for key in get_by_range.keys():
             all_ranges += get_by_range[key]
-        self.draw_y_axis(x, y, height, (max(all_ranges) // 10 + 1) * 10)
-        if name == "Astronomy":
-            print(get_by_range)
-
+        max_numb = max(all_ranges)
+        self.draw_y_axis(x, y, height, (max_numb // 10 + 2) * 10)
+        self.draw_x_axis(x, y + height, width, ranges)
+        self.draw_information(x, y, width, height, (max_numb // 10 + 2) * 10, get_by_range, colors_dict)
 
     def display(self) -> None:
         self.screen.fill("white")
@@ -90,18 +124,23 @@ class Histogramm:
         width_h, height_h = self.get_width_height(amount)
         counter = 0
         second = 0
+        colors = generate_colors()
+        all_houses = set()
+        for key in self.information.keys():
+            all_houses |= set(self.information[key].keys())
+        colors_dict:dict[str: tuple[int]] = {key: next(colors) for key in all_houses}
+        self.display_colors_and_courses(colors_dict)
+
         for key in self.information.keys():
             if not second:
-                self.display_histogram(self.distance + (self.distance + width_h) * counter, 100, width_h, height_h, self.information[key], key)
+                self.display_histogram(self.distance + (self.distance + width_h) * counter, 150, width_h, height_h, self.information[key], key, colors_dict)
                 counter += 1
                 if counter >= amount / 2:
                     counter = 0
                     second = 1 
             else:
-                self.display_histogram(self.distance + (self.distance + width_h) * counter, 100 + height_h + 100, width_h, height_h, self.information[key], key)
+                self.display_histogram(self.distance + (self.distance + width_h) * counter, 150 + height_h + 100, width_h, height_h, self.information[key], key, colors_dict)
                 counter += 1
-        
-        print(width_h, height_h)
 
     def run(self) -> None:
         clock = pygame.time.Clock()

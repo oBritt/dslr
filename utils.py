@@ -1,4 +1,4 @@
-import math
+import random
 
 def my_count_chars(line: str, chararacter: str) -> int:
     counter:int = 0
@@ -79,4 +79,19 @@ def split_range(start: float, end: float, n: int) -> list[list[float, float]]:
     step = (end - start) / n
     ranges = [[start + step * i, start + step * (i + 1)] for i in range(n)]
     return ranges
+
+def generate_colors():
+    counter = 0
+    colors = [(0, 51, 204), (204, 0, 0), (0, 102, 0), (102, 0, 102)]
+    while True:
+        if (counter <= 3):
+            yield colors[counter]
+        else:
+            yield (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+        counter += 1
+
+# if __name__ == "__main__":
+#     colors = generate_colors()
+#     for i in range(5):
+#         print(next(colors))
 
