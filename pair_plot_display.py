@@ -1,24 +1,21 @@
 import pygame
-from getdata import *
 from utils import *
-import time
-from scipy.stats import pearsonr
 
-class Scatter_plot:
-    def __init__(self, width:int, height:int, inf:dict[str, dict[str, list[float]]], scat_inf:list[list]) -> None:
+class Pair_plot:
+    def __init__(self, inf:dict[str, dict[str, list[float]]], scat_inf:list[list]) -> None:
         pygame.init()
-        self.width = width
-        self.height = height
         self.information = inf
         self.running = True
-        self.screen = pygame.display.set_mode((width, height))
+        self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
         pygame.display.set_caption('scatter_plot')
-        self.font_words = pygame.font.SysFont('Arial', 30)
+        self.font_words = pygame.font.SysFont('Arial', 20)
         self.font_cwords = pygame.font.SysFont('Arial', 50)
-        self.font_numbers = pygame.font.SysFont('Arial', 12)
+        self.font_numbers = pygame.font.SysFont('Arial', 10)
         self.courses = [key for key in self.information.keys()]
         self.current = 0
         self.last = 0
+        self.width = self.screen.get_width()
+        self.height = self.screen.get_height()
         self.scat_inf = scat_inf
 
     def handle_event(self) -> None:
@@ -30,13 +27,6 @@ class Scatter_plot:
         keys = pygame.key.get_pressed()
         if keys[pygame.K_ESCAPE]:
             self.running = False
-        if time.time_ns() // 1_000_000 - self.last > 300:
-            if (keys[pygame.K_RIGHT] and self.current < len(self.courses) - 1):
-                self.current += 1
-                self.last = time.time_ns() // 1_000_000
-            elif (keys[pygame.K_LEFT] and self.current >= 1):
-                self.current -= 1
-                self.last = time.time_ns() // 1_000_000
 
     def get_width_text(self, text:str, angle:int, font)->int:
         text_surface = font.render(text, True, (0, 0, 0))
@@ -87,13 +77,12 @@ class Scatter_plot:
         y_pos = y - map_number(value_y, min_val_y, max_val_y, 0, height)
         pygame.draw.circle(self.screen, color, (x_pos, y_pos), 2)
 
-    def display_scatter(self, x:int, y:int, width:int, height:int, compare_with:str, ind:int, colors_dict:dict[str:tuple[int]])->None:
+    def display_scatter(self, x:int, y:int, width:int, height:int, ind_horizontal:int, ind_vertical:int, colors_dict:dict[str:tuple[int]])->None:
         pygame.draw.rect(self.screen, (0, 0, 0), (x, y, width, height), 1)
-        self.draw_text(compare_with, (x + width / 2, y + height + 50), 0, self.font_words)
-        max_x, min_x = self.get_max_min(self.information[compare_with])
+        max_x, min_x = self.get_max_min(self.information[self.courses[ind_horizontal]])
         ranges_x = split_range_scatter(min_x, max_x, 20)
         self.draw_x_axis(x, y + height, width, ranges_x)
-        max_y, min_y = self.get_max_min(self.information[self.courses[self.current]])
+        max_y, min_y = self.get_max_min(self.information[self.courses[ind_vertical]])
         ranges_y = split_range_scatter(min_y, max_y, 20)
         self.draw_y_axis(x, y + height, height, ranges_y)
         min_val_x = ranges_x[0][0]
@@ -101,56 +90,33 @@ class Scatter_plot:
         max_val_y = ranges_y[19][1]
         min_val_y = ranges_y[0][0]
         for student in self.scat_inf:
-            if student[ind + 1] != "" and student[self.current + 1] != "":
-                self.draw_dot(x, y + height, width, height, min_val_x, max_val_x, float(student[ind + 1]), min_val_y, max_val_y, float(student[self.current + 1]), colors_dict[student[0]])
+            if student[ind_horizontal + 1] != "" and student[ind_vertical + 1] != "":
+                self.draw_dot(x, y + height, width, height, min_val_x, max_val_x, float(student[ind_horizontal + 1]), min_val_y, max_val_y, float(student[ind_vertical + 1]), colors_dict[student[0]])
+
+    def display_names(self, width:int, height:int, distance:int, distance_v:int)->None:
+        for y, e in enumerate(self.courses):
+            self.draw_text(e, (20 * (y % 3 + 1) , (height + distance) * y + 7 + height / 2), 90, self.font_words)
+            self.draw_text(e, ((width + distance_v) * y + width / 2 + distance_v * 2, self.screen.get_height() - 15 * (y % 2) - 12), 0, self.font_words)
 
     def display(self, colors_dict:dict[str:tuple[int]])->None:
         self.screen.fill("white")
-        self.draw_text(self.courses[self.current], (self.width - self.get_width_text(self.courses[self.current], 0, self.font_cwords) / 2 - 30, 35), 0, self.font_cwords)
-        self.display_colors_houses(colors_dict)
-        counter = 0
-        first = 1
-        height_s = 250
-        width_s  = 250
-        distance = 55
-        self.draw_text(self.courses[self.current], (30, height_s / 2 + 150), 90, self.font_words)
-        self.draw_text(self.courses[self.current], (30, height_s * 3 / 2 + 300), 90, self.font_words)
-        for ind, key in enumerate(self.information.keys()):
-            if ind != self.current:
-                if (first):
-                    self.display_scatter(distance * 2 + (width_s + distance) * counter, 150, width_s, height_s, key, ind, colors_dict)
-                    counter += 1
-                    if (len(self.courses) - 1) / 2 <= counter:
-                        counter = 0
-                        first = 0
+        # self.display_colors_houses(colors_dict)
+        width = 120
+        height = 90
+        distance = 17
+        distance_v = 60
+        self.display_names(width, height, distance, distance_v)
+        for i in range(len(self.courses)):
+            for e in range(len(self.courses)):
+                if i != e:
+                    self.display_scatter((distance_v + width) * i + distance_v * 2, (distance + height) * e + 5, width, height, i, e, colors_dict)
                 else:
-                    self.display_scatter(distance * 2 + (width_s + distance) * counter, 150 + height_s + 150, width_s, height_s, key, ind, colors_dict)
-                    counter += 1
-
-    def print_most_similar(self)->None:
-        ind1 = None
-        ind2 = None
-        coef = None
-        for i in range(1, len(self.scat_inf[0]) - 1):
-            for e in range(i + 1, len(self.scat_inf[0])):
-                X = []
-                Y = []
-                for l in range(0, len(self.scat_inf)):
-                    if self.scat_inf[l][i] != "" and self.scat_inf[l][e] != "":
-                        X.append(float(self.scat_inf[l][i]))
-                        Y.append(float(self.scat_inf[l][e]))
-                corr_coefficient, p_value = pearsonr(X, Y)
-                if coef == None or p_value < coef:
-                    coef = p_value
-                    ind1 = i - 1
-                    ind2 = e - 1
-        print(f"{self.courses[ind1]} and {self.courses[ind2]} are two features that are the most similar") 
+                    pass
 
     def run(self)->None:
         if (len(self.information) < 2):
             print("sorry there must be at least two features")
             return
-        self.print_most_similar()
         clock = pygame.time.Clock()
         colors = generate_colors()
         all_houses = set()

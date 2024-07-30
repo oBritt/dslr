@@ -100,6 +100,22 @@ class Data:
                 return_val[self.data[i][0]] = out
 
         return return_val
+    
+    def get_information_scatter(self)->list[list]:
+        house_ind = 0
+        valid = []
+        for i in range(len(self.data)):
+            valid.append(check_if_numeric(self.data[i]))
+            if self.data[i][0] == 'Hogwarts House':
+                house_ind = i
+                valid[-1] = 0
+        valid[0] = 0
+        out = [[i] for i in self.data[house_ind][1:]]
+        for i in range(1, len(self.data[house_ind])):
+            for e in range(len(self.data)):
+                if valid[e]:
+                    out[i - 1].append(self.data[e][i])
+        return out
 
     def print_data(self)->None:
         output(self.data)

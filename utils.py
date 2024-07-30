@@ -80,6 +80,15 @@ def split_range(start: float, end: float, n: int) -> list[list[float, float]]:
     ranges = [[start + step * i, start + step * (i + 1)] for i in range(n)]
     return ranges
 
+def split_range_scatter(start: float, end: float, n: int) -> list[list[float, float]]:
+    if n <= 0:
+        raise ValueError("Number of parts must be greater than zero")
+    
+    step = (end - start) / (n - 2)
+    start -= step
+    ranges = [[start + step * i, start + step * (i + 1)] for i in range(n)]
+    return ranges
+
 def generate_colors():
     counter = 0
     colors = [(0, 51, 204), (204, 0, 0), (0, 102, 0), (102, 0, 102)]
@@ -89,6 +98,12 @@ def generate_colors():
         else:
             yield (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
         counter += 1
+
+def map_number(value, from_min, from_max, to_min, to_max):
+    if from_min == from_max:
+        raise ValueError("The source range cannot have the same min and max values.")
+    scale = (to_max - to_min) / (from_max - from_min)
+    return to_min + (value - from_min) * scale
 
 # if __name__ == "__main__":
 #     colors = generate_colors()

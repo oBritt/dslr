@@ -1,6 +1,6 @@
 import sys
 import getdata
-from scatter_plot_display import Scatter_plot
+from pair_plot_display import Pair_plot
 from exception import MyCustomError
 
 def main() -> None:
@@ -12,7 +12,7 @@ def main() -> None:
         d = getdata.get_data(sys.argv[1])
     except MyCustomError as e:
         print(f"Some issues with {sys.argv[1]}")
-    s = Scatter_plot(1920, 1080, d.get_information_histogramm(), d.get_information_scatter())
+    s = Pair_plot(d.get_information_histogramm(), d.get_information_scatter())
     s.run()
 
 if  __name__ == "__main__":
