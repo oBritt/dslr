@@ -1,7 +1,6 @@
 import pygame
 from getdata import *
 from utils import *
-import math
 
 class Histogramm:
     def __init__(self, width: int, height: int, data:dict[str, dict[str, list[float]]]) -> None:
@@ -45,22 +44,19 @@ class Histogramm:
                     out[key][range_n - 1] += 1
         return out
     
-    def display_colors_and_courses(self, colors_dict:dict[str: tuple[int]])->None:
-        distance = 100
-        y = 50
+    def display_colors_houses(self, colors_dict:dict[str:tuple[int]])->None:
+        distance = 40
         for key in colors_dict.keys():
-            # pygame.draw.rect(self.screen, colors_dict[key], (distance, 30, 40, 40))
-            pygame.draw.circle(self.screen, colors_dict[key], (distance + 20, y), 20)
-            width = self.get_width_text(key, self.font_words)
-            self.draw_text(key, (distance + width,y), 0, self.font_words)
-            distance += width 
-            distance += width 
+            additon_distance = self.get_width_text(key, 0, self.font_words)
+            pygame.draw.circle(self.screen, colors_dict[key], (distance, 35), 20)
+            self.draw_text(key, (distance + additon_distance / 2 + 25, 35), 0, self.font_words)
+            distance += additon_distance + 70
 
-    
-    def get_width_text(self, text:str, font)->int:
+    def get_width_text(self, text:str, angle:int, font)->int:
         text_surface = font.render(text, True, (0, 0, 0))
-        text_width, text_height = text_surface.get_size()
-        return text_width
+        rotated_surface = pygame.transform.rotate(text_surface, angle)
+        rotated_rect = rotated_surface.get_rect(center=(self.width // 2, self.height // 2))
+        return rotated_rect.width
     
     def draw_text(self, text: str, position: tuple[int, int], angle: int, font) -> None:
         text_surface = font.render(text, True, (0, 0, 0))
@@ -129,7 +125,7 @@ class Histogramm:
         for key in self.information.keys():
             all_houses |= set(self.information[key].keys())
         colors_dict:dict[str: tuple[int]] = {key: next(colors) for key in all_houses}
-        self.display_colors_and_courses(colors_dict)
+        self.display_colors_houses(colors_dict)
 
         for key in self.information.keys():
             if not second:
@@ -142,8 +138,26 @@ class Histogramm:
                 self.display_histogram(self.distance + (self.distance + width_h) * counter, 150 + height_h + 100, width_h, height_h, self.information[key], key, colors_dict)
                 counter += 1
 
+    def output_most(self)->None:
+        data = [[key] for key in self.information.keys()]
+        for ind, key in enumerate(self.information.keys()):
+            temp = []
+            for key1 in self.information[key].keys():
+                temp += self.information[key][key1]
+            data[ind].append(get_mean(temp))
+            data[ind].append(get_std(temp, data[ind][1]))
+        coures = None
+        min_percent = None
+        for e in data:
+            if coures == None or e[2] < min_percent:
+                coures = e[0]
+                min_percent = e[2]
+        print(coures)
+
+
     def run(self) -> None:
         clock = pygame.time.Clock()
+        self.output_most()
         while self.running:
             self.handle_event()
             self.handle_keys()
