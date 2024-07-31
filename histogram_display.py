@@ -1,6 +1,7 @@
 import pygame
 from getdata import *
 from utils import *
+import time
 
 class Histogramm:
     def __init__(self, width: int, height: int, data:dict[str, dict[str, list[float]]]) -> None:
@@ -12,11 +13,17 @@ class Histogramm:
         self.running = True
         self.information = data
         self.all_values = []
+        self.courses = [key for key in data.keys()]
         self.mean = 0
         self.std = 0
         self.distance = 66
+        self.font_cwords = pygame.font.SysFont('Arial', 50)
         self.font_words = pygame.font.SysFont('Arial', 30)
         self.font_numbers = pygame.font.SysFont('Arial', 12)
+        self.last = 0
+        self.solution = 0
+        self.current = 0
+        self.zoomed = 0
 
     def handle_event(self) -> None:
         for event in pygame.event.get():
@@ -27,6 +34,28 @@ class Histogramm:
         keys = pygame.key.get_pressed()
         if keys[pygame.K_ESCAPE]:
             self.running = False
+        if time.time_ns() // 1_000_000 - self.last > 300:
+            if keys[pygame.K_KP_PLUS]:
+                self.zoomed = 1
+                self.last = time.time_ns() // 1_000_000
+            elif keys[pygame.K_KP_MINUS]:
+                self.zoomed = 0
+                self.last = time.time_ns() // 1_000_000
+            elif keys[pygame.K_LEFT]:
+                self.current -= 1
+                self.last = time.time_ns() // 1_000_000
+                if (self.current < 0):
+                    self.current = len(self.courses) - 1
+            elif keys[pygame.K_RIGHT]:
+                self.current += 1
+                self.last = time.time_ns() // 1_000_000
+                if (self.current == len(self.courses)):
+                    self.current = 0
+            elif keys[pygame.K_s]:
+                self.current = self.solution
+                self.zoomed = 1
+                self.last = time.time_ns() // 1_000_000
+
 
     def get_by_range(self, data:dict[str, list[float]], splited:list[list[float]])->dict[str, list[int]]:
         out = {}
@@ -87,14 +116,14 @@ class Histogramm:
     
     def draw_colomn(self, x:int, y:int, width:int, height:int, color:tuple[int])->None:
         surface = pygame.Surface((width, height), pygame.SRCALPHA)
-        surface.fill((*color, 128))
+        surface.fill((*color, 200))
         self.screen.blit(surface, (x, y - height + 1))
         # pygame.draw.line(self.screen, color, (x, y), (x + 10, y), 2)
 
     def draw_information(self, x:int, y:int, width:int, height:int, max_num:int, data:dict[str, list[int]], colors_dict:dict[str, tuple[int]])->None:
         for key in data.keys():
             for i in range(len(data[key])):
-                self.draw_colomn(x + width * i / len(data[key]) , y + height, width / len(data[key]), height / max_num * data[key][i], colors_dict[key])
+                self.draw_colomn(x + width * i / len(data[key]) , y, width / len(data[key]), height / max_num * data[key][i], colors_dict[key])
 
     def display_histogram(self, x:int, y:int, width:int, height:int, data:dict[str, list[float]], name:str, colors_dict:dict[str, tuple[int]])->None:
         pygame.draw.polygon(self.screen, (0, 0, 0), [[x, y], [x + width, y], [x + width, y + height], [x, y + height]], 1)
@@ -112,6 +141,43 @@ class Histogramm:
         max_numb = max(all_ranges)
         self.draw_y_axis(x, y, height, (max_numb // 10 + 2) * 10)
         self.draw_x_axis(x, y + height, width, ranges)
+        self.draw_information(x, y + height, width, height, (max_numb // 10 + 2) * 10, get_by_range, colors_dict)
+
+    def draw_y_axis_zoomed(self, x:int, y:int, height:int, max_numb:int)->None:
+        pygame.draw.line(self.screen, (0, 0, 0), (x, y), (x, y - height - 40), 3)
+        pygame.draw.polygon(self.screen, (0, 0, 0), [[x, y - height - 70], [x - 11, y - height - 15], [x, y - height - 40], [x + 11, y - height - 15]])
+        for i in range(10):
+            lenght = self.get_width_text(str("%.0f" % (max_numb * (i + 1) / 10)), 0, self.font_words)
+            self.draw_text(str("%.0f" % (max_numb * (i + 1) / 10)), (x - 15 - lenght / 2, y - height * (i + 1) / 10), 0, self.font_words)     
+            pygame.draw.line(self.screen, (0, 0, 0), (x - 10, y - height * (i + 1) / 10), (x + 10, y - height * (i + 1) / 10), 3)
+
+    def draw_x_axis_zoomed(self, x:int, y:int, width:int, ranges:list[list[float]])->None:
+        pygame.draw.line(self.screen, (0, 0, 0), (x, y), (x + width + 40, y), 3)
+        pygame.draw.polygon(self.screen, (0, 0, 0), [[x + width + 70, y], [x + width + 15, y - 11], [x + width + 40, y], [x + width + 15, y + 11]])
+        for i in range(10):
+            self.draw_text(str("%.1f" % (ranges[len(ranges) // 10 * (i + 1) - 1][1])), (x + width * (i + 1) / 10, y + 35), 0, self.font_words)
+            pygame.draw.line(self.screen, (0, 0, 0), (x + width * (i + 1) / 10, y - 10), (x + width * (i + 1) / 10, y + 10), 3)
+
+    def display_zoomed(self, colors_dict:dict[str, tuple[int]])->None:
+        self.draw_text(self.courses[self.current], (self.width / 2, 100), 0, self.font_cwords)
+        data = self.information[self.courses[self.current]]
+        all_numbers = []
+        for key in data.keys():
+            all_numbers += data[key]
+        all_numbers = sorted(all_numbers)
+        # can use max and min potentially for improve perfomance
+        ranges = split_range(all_numbers[0], all_numbers[len(all_numbers) -1], 100)
+        get_by_range = self.get_by_range(data, ranges)
+        all_ranges = []
+        for key in get_by_range.keys():
+            all_ranges += get_by_range[key]
+        max_numb = max(all_ranges)
+        width = 1500
+        height = 750
+        x = 150
+        y = self.height - 100
+        self.draw_y_axis_zoomed(x, y, height, (max_numb // 10 + 2) * 10)
+        self.draw_x_axis_zoomed(x, y, width, ranges)
         self.draw_information(x, y, width, height, (max_numb // 10 + 2) * 10, get_by_range, colors_dict)
 
     def display(self) -> None:
@@ -127,16 +193,19 @@ class Histogramm:
         colors_dict:dict[str: tuple[int]] = {key: next(colors) for key in all_houses}
         self.display_colors_houses(colors_dict)
 
-        for key in self.information.keys():
-            if not second:
-                self.display_histogram(self.distance + (self.distance + width_h) * counter, 150, width_h, height_h, self.information[key], key, colors_dict)
-                counter += 1
-                if counter >= amount / 2:
-                    counter = 0
-                    second = 1 
-            else:
-                self.display_histogram(self.distance + (self.distance + width_h) * counter, 150 + height_h + 100, width_h, height_h, self.information[key], key, colors_dict)
-                counter += 1
+        if not self.zoomed:
+            for key in self.information.keys():
+                if not second:
+                    self.display_histogram(self.distance + (self.distance + width_h) * counter, 150, width_h, height_h, self.information[key], key, colors_dict)
+                    counter += 1
+                    if counter >= amount / 2:
+                        counter = 0
+                        second = 1 
+                else:
+                    self.display_histogram(self.distance + (self.distance + width_h) * counter, 150 + height_h + 100, width_h, height_h, self.information[key], key, colors_dict)
+                    counter += 1
+        else:
+            self.display_zoomed(colors_dict)
 
     def output_most(self)->None:
         data = [[key] for key in self.information.keys()]
@@ -148,11 +217,11 @@ class Histogramm:
             data[ind].append(get_std(temp, data[ind][1]))
         coures = None
         min_percent = None
-        for e in data:
+        for ind, e in enumerate(data):
             if coures == None or e[2] < min_percent:
-                coures = e[0]
+                coures = ind
                 min_percent = e[2]
-        print(coures)
+        self.solution = coures
 
 
     def run(self) -> None:
